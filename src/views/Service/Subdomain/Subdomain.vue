@@ -5,10 +5,10 @@ main#subdomain
             h4.title Hosting
             .buttonWrap(v-if="currentService.subdomain") 
                 .refresh.clickable(:class="{'nonClickable' : !account.email_verified || subdomainState || refreshCDNRun}" @click='refreshCdn()')
-                    .material-symbols-outlined.mid(:class="{'rotate_animation': refreshCDNRun}") cached
+                    .material-symbols-outlined.mid(:class="{'rotate_animation': refreshCDNRun}" title="refresh") cached
                     span Refresh CDN
                 .delete.clickable(:class="{'nonClickable' : !account.email_verified || subdomainState || currentService.active == 0}" @click='showDeleteSubdomain = true;')
-                    .material-symbols-outlined.mid delete
+                    .material-symbols-outlined.mid(title="delete") delete
                     span Delete
         br
 
@@ -29,9 +29,9 @@ main#subdomain
                 template(v-else)
                     .cont
                         p {{ computedSubdomain }}
-                            a.link(:href="'http://' + computedSubdomain + '.' + domain" target="_blank")
+                            a.link(:href="'http://' + computedSubdomain + '.' + domain" target="_blank" title="link")
                                 .material-symbols-outlined.sml link
-                        .material-symbols-outlined.mid.clickable(@click="modifySudomain=true;" :class="{'nonClickable' : !account.email_verified || currentService.active == 0}") edit
+                        .material-symbols-outlined.mid.clickable(@click="modifySudomain=true;" :class="{'nonClickable' : !account.email_verified || currentService.active == 0}" title="edit") edit
             .setting
                 h6.tit HTML file for 404 page
                 .cont.line
@@ -41,10 +41,10 @@ main#subdomain
                             img.loading(style='position: absolute;right: 1em;top: 8px;' src="@/assets/img/loading.png")
                         template(v-else)
                             label.uploadBtn(v-if="subdomainInfo?.[computedSubdomain]?.['404']" @click='removeSet404')
-                                .material-symbols-outlined.mid cancel
+                                .material-symbols-outlined.mid(title="cancel") cancel
                                 span Remove
                             label.uploadBtn(for="file404" v-else)
-                                .material-symbols-outlined.mid upload
+                                .material-symbols-outlined.mid(title="upload") upload
                                 span Upload
                             input#file404(hidden type="file" @change="set404" accept='text/html')
 
@@ -80,7 +80,7 @@ main#subdomain
 
             .filesButtonWrap
                 // file menu
-                .menu(@click.stop="showEdit = !showEdit" :class='{"nonClickable": !checkedFiles.length || !account.email_verified || currentService.active == 0}')
+                .menu(@click.stop="showEdit = !showEdit" :class='{"nonClickable": !checkedFiles.length || !account.email_verified || currentService.active == 0}' title="menu")
                     .material-symbols-outlined.mid.clickable(title="menu") more_vert
                     #moreVert(v-if="showEdit" @click.stop style="--moreVert-right: 0;")
                         .inner
@@ -92,7 +92,7 @@ main#subdomain
                                 span delete
                 .menu.material-symbols-outlined.mid.refresh.clickable(title="refresh" :class='{"rotate_animation": fetching }' @click='refresh(searchDir)') cached
                 .menu(:class='{"nonClickable": !account.email_verified || currentService.active == 0}' @click="showRemoveAllFiles = true;")
-                    .material-symbols-outlined.mid.clickable delete
+                    .material-symbols-outlined.mid.clickable(title="delete") delete
                     span(style="font-weight:700") Empty storage
                 .customFile(:class="{'nonClickable': !account.email_verified || Object.keys(fileList).length || currentService.active == 0}")
                     label.uploadBtn(for="files")
