@@ -121,11 +121,11 @@ export default class Service {
         email: number,
         service: string
     } = {
-        cloud: null,
-        database: null,
-        email: null,
-        service: ''
-    }
+            cloud: null,
+            database: null,
+            email: null,
+            service: ''
+        }
 
     constructor(id: string, service: ServiceObj, endpoints: string[]) {
         this.id = id;
@@ -176,7 +176,7 @@ export default class Service {
     async setServiceOption(opt: {
         'prevent_signup': boolean;
         'client_secret': Record<string, any>;
-    }): Promise<Service> {
+    }): Promise<ServiceObj> {
         let updated = await skapi.request(this.admin_private_endpoint + 'service-opt', { service: this.id, opt }, { auth: true });
         Object.assign(this.service, updated);
         return updated;
@@ -190,6 +190,68 @@ export default class Service {
     }> {
         this.storageInfo = await skapi.request(this.record_private_endpoint + 'storage-info', { service: this.id }, { auth: true });
         return this.storageInfo;
+    }
+
+    async enableService(): Promise<ServiceObj> {
+        if (this.service.active === 0) {
+            await skapi.request(this.record_private_endpoint + 'register-service', {
+                service: this.id,
+                execute: 'enable'
+            }, { auth: true });
+
+            this.service.active = 1;
+        }
+
+        return this.service;
+    }
+
+    async disableService(): Promise<ServiceObj> {
+        if (this.service.active > 0) {
+            await skapi.request(this.record_private_endpoint + 'register-service', {
+                service: this.id,
+                execute: 'disable'
+            }, { auth: true });
+
+            this.service.active = 0;
+        }
+
+        return this.service;
+    }
+
+    async updateService(
+        params: {
+            name: string;
+            cors: string;
+            api_key: string;
+        }
+    ): Promise<ServiceObj> {
+        let to_update: { [key: string]: any; } = {};
+        
+        if (params.cors) {
+            let cors = params.cors.split(',').map((c) => c.trim());
+            let service_cors = (this.service.cors || '').split(',').map((c) => c.trim());
+            for(let c of cors) {
+                if (!service_cors.includes(c)) {
+                    to_update.cors = service_cors;
+                    break;
+                }
+            }
+        }
+
+        if(params.name && params.name !== this.service.name) {
+            to_update.name = params.name;
+        }
+
+        if(params.api_key && params.api_key !== this.service.api_key) {
+            to_update.api_key = params.api_key;
+        }
+
+        if (Object.keys(to_update).length) {
+            await skapi.request(this.record_private_endpoint + 'register-service', Object.assign({ execute: 'update', service: this.id }, to_update), { auth: true });
+            Object.assign(this.service, to_update);
+        }
+
+        return this.service;
     }
 
     //////////////////////////////////////////////////////////////////////////////
