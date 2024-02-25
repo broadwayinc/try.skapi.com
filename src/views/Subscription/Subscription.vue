@@ -147,7 +147,7 @@
                     br
 
                     .btn(style="display:block;text-align:right;")
-                        button.final Resume Plan
+                        button.final(@click="checkDate") Resume Plan
 
                 section(v-else)
                     h4 Cancel Plan
@@ -179,7 +179,7 @@ DowngradePlanOverlay(v-if="showDowngradePlan" @close="closeOverlay" :changeMode=
 import { useRoute, useRouter } from 'vue-router';
 import { nextTick, ref } from 'vue';
 import { currentService, serviceFetching } from '@/data.js';
-import { skapi, account } from '@/main.js';
+import { skapi, account, customer } from '@/main.js';
 import CancelPlanOverlay from '@/views/Subscription/CancelPlanOverlay.vue';
 import UpgradePlanOverlay from '@/views/Subscription/UpgradePlanOverlay.vue';
 import DowngradePlanOverlay from '@/views/Subscription/DowngradePlanOverlay.vue';
@@ -196,6 +196,7 @@ let showCancelPlan = ref(false);
 let showUpgradePlan = ref(false);
 let showDowngradePlan = ref(false);
 let cancelState = ref(false);
+let product = JSON.parse(import.meta.env.VITE_PRODUCT);
 
 async function getSubscription() {
     let subs_id = currentService.value.subs_id.split('#');
@@ -229,6 +230,7 @@ async function getSubscription() {
         return;
     }
 
+    console.log(response)
     return response;
 }
 
@@ -237,10 +239,13 @@ let closeOverlay = async () => {
     showDowngradePlan.value = false;
     showCancelPlan.value = false;
 
-    serviceFetching.value = skapi.getServices(null, true).then(() => {
-        nextTick(() => {
-            getCurrentService();
-        })
+    serviceFetching.value = skapi.getServices(null, true).then(async() => {
+        if (currentService.value?.subs_id) {
+            getSubs.value = await getSubscription();
+        }
+        // nextTick(() => {
+        //     getCurrentService();
+        // })
     }).finally(() => {
         serviceFetching.value = false;
     });
@@ -263,6 +268,114 @@ let getCurrentService = async () => {
     }
 
     console.log(currentService.value)
+}
+
+let checkDate = () => {
+    let currentDate =+ new Date();
+    let cancelDate = getSubs.value.cancel_at * 1000;
+    console.log(currentDate, cancelDate)
+
+    if(currentDate > cancelDate) {
+        createPlan();
+    } else {
+        updatePlan();
+    }
+}
+
+let createPlan = async (ticket_id) => {
+    serviceFetching.value = true;
+
+    if(currentService.group == 2) {
+        ticket_id = 'standard'
+    } else if(currentService.group == 3) {
+        ticket_id = 'premium'
+    }
+
+    let resolvedCustomer = await customer;
+    let customer_id = resolvedCustomer.id;
+    let currentUrl = window.location;
+
+    let response = await skapi.clientSecretRequest({
+        clientSecretName: 'stripe_test',
+        url: 'https://api.stripe.com/v1/checkout/sessions',
+        method: 'POST',
+        headers: {
+            Authorization: 'Bearer $CLIENT_SECRET',
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        data: {
+            client_reference_id: account.value.user_id,
+            customer: customer_id,
+            'customer_update[name]': 'auto',
+            'customer_update[address]': 'auto',
+            'subscription_data[metadata][service]': currentService.value.service,
+            'subscription_data[metadata][owner]': account.value.user_id,
+            'mode': 'subscription',
+            'subscription_data[description]': 'Subscription Plan of service ID: ' + currentService.value.service,
+            cancel_url: currentUrl.origin + '/subscription/' + currentService.value.service,
+            "line_items[0][quantity]": 1,
+            'line_items[0][price]': product[ticket_id],
+            "success_url": currentUrl.origin + '/subscription/' + currentService.value.service + '?checkout_id={CHECKOUT_SESSION_ID}&service_id=' + currentService.value.service + '&ticket_id=' + ticket_id,
+            'tax_id_collection[enabled]': true,
+        }
+    });
+    if (response.error) {
+        alert(response.error.message);
+        return;
+    }
+
+    serviceFetching.value = false;
+    window.location = response.url;
+}
+
+let updatePlan = async (ticket_id) => {
+    serviceFetching.value = true;
+
+    if(currentService.group == 2) {
+        ticket_id = 'standard'
+    } else if(currentService.group == 3) {
+        ticket_id = 'premium'
+    }
+
+    let subs_id = currentService.value.subs_id.split('#');
+
+    if (!currentService.value.subs_id) {
+        alert('Service does not have a subscription');
+        return;
+    }
+
+    if (subs_id.length < 2) {
+        alert('Service does not have a subscription');
+        return;
+    }
+
+    let SUBSCRIPTION_ID = subs_id[0];
+    let SUBSCRIPTION_ITEM_ID = subs_id[1];
+
+    let response = await skapi.clientSecretRequest({
+        clientSecretName: 'stripe_test',
+        url: `https://api.stripe.com/v1/subscriptions/${SUBSCRIPTION_ID}`,
+        method: 'POST',
+        headers: {
+            Authorization: 'Bearer $CLIENT_SECRET',
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        data: {
+            'items[0][id]': SUBSCRIPTION_ITEM_ID,
+            'items[0][price]': product[ticket_id],
+            proration_behavior: 'create_prorations',
+            'cancel_at_period_end': false
+        }
+    });
+
+    console.log(response);
+    getCurrentService();
+    serviceFetching.value = false;
+
+    if (response.error) {
+        alert(response.error.message);
+        return;
+    }
 }
 
 if (serviceFetching.value instanceof Promise) {

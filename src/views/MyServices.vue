@@ -207,10 +207,11 @@ main#myServices
                     .title 
                         h4(style="display:inline-block;") Standard Mode
                         .right(style="display:inline-block; text-align:right;")
-                            .free 
-                                span (Only for promotion period)
-                                p(style="display:inline-block; margin-left:10px") Free
-                            .price.discount $19
+                            //- .free 
+                            //-     span (Only for promotion period)
+                            //-     p(style="display:inline-block; margin-left:10px") Free
+                            //- .price.discount $19
+                            .price $19
                     .contWrap(style="justify-content:space-between;")
                         ul
                             li 

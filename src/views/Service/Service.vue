@@ -1,5 +1,5 @@
 <template lang="pug">
-PlanCaution(v-if="currentService?.subsInfo?.cancel_at_period_end && showPlanCaution" @close="showPlanCaution = false;")
+PlanCaution(v-if="(currentService?.subsInfo?.cancel_at_period_end || currentService?.subsInfo?.status == 'unpaid' || currentService?.subsInfo?.status == 'canceled') && showPlanCaution" @close="showPlanCaution = false;")
 
 main#service
     .infoWrap
@@ -119,7 +119,7 @@ main#service
                 .list(style="width:23.5%;margin-right:2%")
                     h6 State 
                     h5(v-if="currentService?.subsInfo?.cancel_at_period_end" style="color:var(--caution-color)") Canceled
-                    h5(v-else-if="new Date().getTime() < currentService?.subsInfo?.canceled_at" style="color:var(--caution-color)") Suspended
+                    h5(v-else-if="currentService?.subsInfo?.cancel_at_period_end && new Date().getTime() < currentService?.subsInfo?.canceled_at" style="color:var(--caution-color)") Suspended
                     h5(v-else) Running
                 .list(style="width:23.5%;margin-right:2%")
                     h6 Renew Date
@@ -205,7 +205,7 @@ main#service
 
     br
 
-    section.deleteWrap(v-if="currentService.active < 0 || currentService.group == 1" :class="{'nonClickable' : !account?.email_verified || currentService.active == 0}")
+    section.deleteWrap(v-if="currentService.active < 0 || currentService.group == 1 || currentService.group == 51" :class="{'nonClickable' : !account?.email_verified || currentService.active == 0}")
         h4 Delete Service
         
         br
@@ -232,7 +232,6 @@ import DeleteService from '@/components/DeleteService.vue';
 import PlanCaution from '@/components/PlanCaution.vue';
 
 const router = useRouter();
-
 let convertToMb = (size) => {
     if (size) {
         return (size / (1024 * 1024)).toFixed(2) + ' MB'
